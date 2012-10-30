@@ -1,0 +1,94 @@
+**** Version 1.14 released ****
+
+2004-04-23  Frank D. Cringle  <fdc@sabre.ping.de>
+
+	* yaze.c, Makefile (VERSION): update version string.
+
+	* simz80.pl: simulate the interrupt register (IR).  (Michael Haardt).
+
+	* bios.c (bios): case 254 incremented pc twice in a macro argument
+	(Carl Mascott).
+
+**** Version 1.13 released ****
+
+2004-01-24  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* yaze.c, Makefile (VERSION): update version string.
+
+	* simz80.h: pagetable definition did not match the definition in
+	yaze.c (Michael Haardt).
+
+**** Version 1.12 released ****
+
+2004-01-12  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* Makefile: host2cpm.tcl should be included in the tarball.
+
+**** Version 1.11 released ****
+
+2004-01-11  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* monitor.c (CLK_TCK): conditional definition.
+
+	* cdm.c: add 'ambiguous filename -> unix directory' functionality,
+	contributed by Carl Mascott.
+
+	* bios.c bios.h monitor.c: apply patch from Guenter Radestock so
+	that stdin can be a pipe.
+	(readsec): fix lru sort bug reported by Carl Mascott.
+
+	* simz80.pl (OUTP): fix register selection (Michael Haardt).
+
+	* io.c yaze.c: fixes for CP/M 3.0 by Michael Haardt.
+
+	* host2cpm.tcl: copies host directories to/from a cpm disk image
+	file, contributed by Gary L. Howell.
+
+	* Makefile: 'make tar' modified so that the test sources are
+	converted from LF to CRLF.  Add host2cpm.tcl to DISTRIB.
+
+
+
+
+**** Version 1.10 released ****
+
+1998-01-27  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* simz80.pl: set the flags correctly for LD A,I/R and
+	CPI/CPIR/CPD/CPDR (reported by Sean Young).
+
+	* monitor.c (mountdir): fix fencepost error when setting cp[15],
+	as reported by Richard Hirst.
+
+1998-01-25  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* simz80.pl: change direct and indirect references to the RAM()
+	macro, because it now evaluates its operand more than once if MMU
+	is in use (contributed by Michael Haardt).
+
+	* yaze.c, simz80.h: Make BIOS optional and add MMU initialisation
+	(contributed by Michael Haardt).
+
+Sun Apr 28 11:30:52 1996  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* cdm.c (getblock): rename index to idx (avoids a warning about
+	shadowing index()).
+	(main): correct a type in the !USE_GNU_READLINE case.
+
+Thu Apr 25 15:32:24 1996  Frank D. Cringle  <fdc@cliwe.ping.de>
+
+	* bios.c (constat, lststat): select() may modify timeval, so
+	reinitialise it.
+	(readsec,writesec): protect against undefined or unmounted disk.
+	(bios): Add BgiiFix.
+
+	* monitor.c (mount): use MAP_FILE flag in mmap() call (linux-ism?).
+
+	* yaze.c (load_cpm): correctly calculate available memory if
+	loadadr is specified.
+
+	* simz80.pl (CALLC): rename symbol adr to avoid warning msg.
+
+	* cdm.c (srchdir): ignore cpm-3 byte count.
+
+

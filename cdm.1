@@ -1,0 +1,88 @@
+.\"	$Id: cdm.1,v 1.2 2004/01/11 16:11:17 fdc Exp $	
+.TH cdm 1 "10 October 1995" "Frank\'s Hacks" "Local commands"
+.UC 4
+.SH NAME
+cdm \- CP/M disk manager
+.SH SYNOPSIS
+.PU
+.ll +8
+.B cdm
+.I file...
+.ll -8
+.br
+.SH DESCRIPTION
+.B cdm
+gives access to the CP/M disk images used by \fByaze(1)\fR.  With
+\fBcdm\fR you can create disks, copy files to and from the Unix file
+system, list files and erase files from the CP/M disk.
+.SH OPTIONS
+Any files listed on the \fBcdm\fR command line are taken to be
+existing CP/M disk files and they are mounted successively to drive A,
+B, C, ... etc.
+
+The format of CP/M disk files (<CPM_Disk>) is described in yaze.doc.
+.SH INTERACTIVE COMMANDS
+The interactive interface to \fBcdm\fR mimics an extended CP/M clone.
+The current disk and user number appear in the prompt and can be
+changed by entering DU: as a command, where D is any mounted disk
+letter (a .. p) and U is a user number (\fBcdm\fR allows 0 .. 31,
+although you should restrict yourself to numbers under 16 to remain
+compatible with CP/M).
+
+DU: can also be prefixed to any filename, to indicate that it is not
+on the current disk/user.  Two pseudo disks can be referenced in the
+\fBcopy\fR command: u and t.  These refer to files in the Unix
+file-system. `u:file' refers to a binary Unix file and `t:file' refers
+to a text Unix file.  The difference is that u: files are copied
+verbatim whereas t: files undergo CRLF and ^Z processing appropriate
+for the copy direction (to or from CP/M).
+
+Command names can be shortened to a unique abbreviation.  If \fBcdm\fR
+was compiled with GNU Readline, command-line editing, filename
+completion and history recall are available - see the readline
+documentation.
+.TP
+.B help
+Display a command list
+.TP
+.B help \fIcmd\fR
+Give details about \fIcmd\fR
+.TP
+.B mount
+Mount a Unix file as a CP/M disk
+.TP
+.B umount
+Unmount a CP/M disk
+.TP
+.B dir
+Display directory
+.TP
+.B ls
+Synonym for `dir'
+.TP
+.B era
+Erase CP/M file(s)
+.TP
+.B cp
+Copy a file
+.TP
+.B rename
+Rename a CP/M file
+.TP
+.B type
+Pipe a text file through $PAGER
+.TP
+.B create
+Create a new disk
+.TP
+.B !
+Execute a Unix command
+.TP
+.B quit
+Terminate cdm
+
+
+.SH SEE ALSO
+.B yaze(1)
+.SH AUTHOR
+Frank D. Cringle (fdc@cliwe.ping.de).

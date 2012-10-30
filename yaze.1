@@ -1,0 +1,115 @@
+.\"	$Id: yaze.1,v 1.2 2004/01/11 16:11:17 fdc Exp $	
+.TH yaze 1 "10 October 1995" "Frank\'s Hacks" "Local commands"
+.UC 4
+.SH NAME
+yaze \- yet another z80 emulator
+.SH SYNOPSIS
+.PU
+.ll +8
+.B yaze
+.RB [ -v ]
+.RB [ -b\fIbootfile ]
+.RB [ -l\fIloadadr ]
+.RB [ -p\fIbasepage ]
+.RB [ -s\fIstartup ]
+.RB [ -z\fIZ3ENV ]
+.I command...
+.ll -8
+.br
+.SH DESCRIPTION
+.B yaze
+is designed to provide an exact simulation of the Z80 microprocessor
+on a Unix system.  In addition to the instruction-set emulator, a
+CP/M basic i/o system is provided that can reference Unix directories
+and Unix files containing images of CP/M disks.  When a genuine CP/M
+operating system (ccp + bdos) or a clone system is loaded into the
+emulator, a complete CP/M system is available, running on a Unix host.
+
+The complete documentation is contained in the file yaze.doc.
+.SH OPTIONS
+.TP
+.B -v
+causes a summary of the system configuration to be displayed after
+loading.
+.TP
+.B -b
+gives the name of a file to be loaded into the emulated processor's
+ram before the emulation is started.  The file is loaded at the
+address given by the \fB-l\fR option, if one is present, or else at
+the basepage (see \fB-p\fR).  If a bootfile is not specified with the
+\fB-b\fR option, yaze looks for the file yaze.boot in the current
+directory first, then in /usr/local/lib.
+.TP
+.B -l
+the hexadecimal address at which to load and start the bootstrap file,
+if a separate bootstrap is necessary.
+.TP
+.B -p
+the top 2 hex digits of the location of the CP/M console command
+processor.  Also the location to which bootfile is loaded if a
+\fB-l\fR option is not present.
+.TP
+.B -s
+a file containing monitor commands that are to be executed before
+starting the emulator.  If no \fB-s\fR option is present, .yazerc from
+the current directory or from the user's home directory is taken.
+.TP
+.B -z
+the hexadecimal address in the emulated processor's ram of a 1KByte
+area that should be reserved for use by an extended CP/M clone such as
+ZCPR3.
+.SH MONITOR COMMANDS
+When the emulator is started it executes commands first from the
+startup file, then from the tail of the command line (any strings
+which follow the options) and then from the tty if neither the startup
+file nor the command line included a "go" command.  Control can be
+returned to the monitor by executing the CP/M sys.com command or, if
+yaze was compiled with -DDEBUG, by sending it a SIGINT signal.
+
+Command names can be shortened to a unique abbreviation.  If
+\fByaze\fR was compiled with GNU Readline, command-line editing,
+filename completion and history recall are available - see the
+readline documentation.
+
+The monitor commands are described in more detail in the file
+yaze.doc.
+.TP
+.B help
+Display a command list
+.TP
+.B help \fIcmd\fR
+Give details about \fIcmd\fR
+.TP
+.B attach
+Attach CP/M device to a Unix file
+.TP
+.B detach
+Detach CP/M device from file
+.TP
+.B mount
+Mount a Unix file or directory as a CP/M disk
+.TP
+.B umount
+Unmount a CP/M disk
+.TP
+.B create
+Create a new disk
+.TP
+.B interrupt
+Set user interrupt key
+.TP
+.B go
+Start/Continue CP/M execution
+.TP
+.B !
+Execute a Unix command
+.TP
+.B quit
+Terminate yaze
+.TP
+.B time
+Display elapsed time since last `time' command
+.SH SEE ALSO
+.B cdm(1)
+.SH AUTHOR
+Frank D. Cringle (fdc@cliwe.ping.de).

@@ -1,0 +1,39 @@
+	title	'Transfer control to the yaze system monitor'
+; Only expect this command to work when running under Yet Another Z80
+; Emulator (yaze).  It will halt a real Z80.
+	org	100h
+	ld	hl,cmd	 ;  where to put the user's command
+	ex	de,hl
+	ld	hl,80h	 ;  point to command line
+	ld	b,(hl)	 ;  get length
+	inc	hl
+	ld	a,b
+	or	a
+	jr	z,empty
+loop:	inc	hl
+	ld	a,(hl)
+	cp	'A'
+	jr	c,notcap
+	cp	'Z'+1
+	jr	nc,notcap
+	or	20h
+notcap:	ld	(de),a
+	inc	de
+	djnz	loop
+	
+empty:	ld	hl,fin
+	ld	bc,fine-fin
+	ldir		 ;  copy terminator and final jump
+	jr	gomon
+
+fin:	db	0	 ;  end of command string
+	ld	de,0ffffh ; all drives 
+	ld	c,37	 ;  reset drives in case of mount/dismount etc.
+	call	5	 ;  bdos call
+	jp	0	 ;  reboot
+fine:	
+
+gomon:	halt		 ;  stop normal emulation
+	db	0feh	 ;  code which calls monitor
+cmd:			 ;  space for command
+	end

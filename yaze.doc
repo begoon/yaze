@@ -1,0 +1,552 @@
+Yet Another Z80 Emulator
+========================
+
+Contents
+========
+
+  1. Introduction
+  2. Installation and Testing
+  3. Command-line options
+  4. Bootstrap file formats
+  5. Creating bootstrap files
+  6. CP/M disks
+  7. Benchmarks
+  8. Emulating embedded systems
+  9. Software sources
+ 10. Why?
+
+
+1.  Introduction
+================
+The README file gives a brief overview of what yaze is and why you
+might want to install it.  This package assumes you have a unix system
+and that a number of common tools are available on it.
+
+
+2.  Installation and Testing
+============================
+First you need to uncompress and untar the archive file, which you
+have probably already done if you are reading this.  Go to the
+directory under which you want yaze to be unpacked,
+e.g. /usr/local/src.  Then, if you have gnu-tar, type
+'tar xzf yaze-1.00.tar.gz' and otherwise
+'zcat yaze-1.00.tar.gz | tar xf -'.  Change to the newly created
+directory yaze-1.00 and edit the Makefile.
+
+If GNU Readline is available on your system you will probably want to
+use it with yaze.  Readline comes together with most interactive
+programs from the Free Software Foundation, such as gdb and bash.  It
+permits command-line editing, history recall and (unix-) filename
+completion when used with yaze and cdm.  The include files and library
+should be somewhere where your compiler can find them, otherwise you
+will have to add the paths to the Makefile.
+
+When you have customized the Makefile, try 'make'.  Yaze was developed
+under SunOS5 and I have briefly tried it under Linux and FreeBSD.  You
+will have to do some hacking if your system does not support the
+termios tty interface.  You will have to do a lot of hacking if your
+system does not have memory mapped files via mmap() and munmap().
+
+Once you have a clean make of yaze you can try it out.  WARNING! Yaze
+disables all tty interrupts by default, so if you only have 1 terminal
+session available it may be difficult to regain control if yaze goes
+haywire.  You may want to add the line 'interrupt ^C' (or some other
+character) to .yazerc to be safe (though you cannot use that character
+under CP/M then).  Under X11 or screen this is not a problem because
+you can kill a runaway process from a different window.  The normal
+way to leave yaze is to type 'sys quit' at the CP/M A> prompt.
+
+Start yaze by typing 'yaze -v'.  This will use the defaults and give a
+verbose account of the system configuration.
+
+---------------------------------------------------------------------------
+    $ yaze -v
+
+    Yet Another Z80 Emulator version 1.00, Copyright 1995 Frank D. Cringle.
+    yaze comes with ABSOLUTELY NO WARRANTY; for details
+    see the file "COPYING" in the distribution directory.
+
+    Running 'yaze.boot'
+    bootfile:       /usr/local/lib/yaze.boot
+    startup file:   .yazerc
+    basepage:       d8
+    ccp_base:       d800
+    bdos_base:      e000
+    bios_base:      ee00
+    bios_top:       ee66
+    dptable:        fd90
+    dirbuf:         ff80
+
+    A>
+---------------------------------------------------------------------------
+
+This shows the default values of various parameters which can be
+overridden on the command line.  The bootfile will be described in more
+detail later.  The basepage is where the CP/M ccp is placed, and the
+other addresses follow from that.  The ccp is 800h bytes long and the
+bdos is 0e00h long.  The bios occupies only 66h bytes in the Z80 ram,
+because all we need is the jump table for 17 vectors and the targets
+for these jumps to transfer control to the real bios executing on the
+host cpu.  The space between bios_top and dptable is available for
+disk allocation vectors.  Dptable has space for the maximum possible
+16 disk parameter headers and disk parameter blocks.  The dirbuf is
+shared between all disks as in standard CP/M.
+
+Yaze reads the file .yazerc when it starts up and the distributed
+.yazerc contains:
+    mount a test
+    go
+
+The first line mounts the unix directory 'test' as CP/M drive A and
+the second line starts the emulator.  Commands such as 'mount' and
+'go' can also be entered interactively when the emulator is in
+monitor mode.  It starts out in monitor mode (unless the command line
+or startup file contain 'go'), and you can get back to monitor mode by
+executing the CP/M command 'sys'.  This command is found in the file
+sys.com in the test directory.  It is difficult to get out of the
+emulator if you do not keep a copy of sys.com accessible on a mounted
+disk.
+
+If you execute 'sys' without arguments it takes you into monitor mode,
+which is indicated by the $> prompt.  Here a number of commands are
+available, including a help command.
+
+---------------------------------------------------------------------------
+    A>sys
+
+    $>help
+    help        Display this text or give help about a command
+    ?           Synonym for `help'
+    attach      Attach CP/M device to a unix file
+    detach      Detach CP/M device from file
+    mount       Mount a unix file or directory as a CP/M disk
+    umount      Unmount a CP/M disk
+    create      Create a new disk
+    interrupt   Set user interrupt key
+    go          Start/Continue CP/M execution
+    !           Execute a unix command
+    quit        Terminate yaze
+    time        Display elapsed time since last `time' command
+    $>
+---------------------------------------------------------------------------
+
+More information about each command is available by entering
+'help command'.
+
+---------------------------------------------------------------------------
+    $>help help
+    help <cmd>                 displays more information about <cmd>
+
+    $>help attach
+    attach                     without arguments lists the current attachments
+    attach <physdev> <file>    attaches <physdev> to the unix <file>,
+    			       where <physdev> is one of ttyin, ttyout,
+    			       crtin, crtout, uc1in, uc1out, rdr,
+    			       ur1, ur2, pun, up1, up2, lpt, ul1
+
+    $>help detach
+    detach <physdev>           closes the file attached to <physdev>
+    			       (see attach)
+
+    $>help mount
+    mount                      without arguments lists the mount table
+    mount -v                   lists the mount table verbosely
+    mount <drive> <file>       mounts <file> as CP/M disk <drive>
+    			       (a letter from a..p).
+    	    If <file> is a plain file it must contain a CP/M filesystem.
+    	    If <file> is a unix directory its contents may be accessed
+    	       as a read-only CP/M disk
+    mount -r <drive> <file>    mounts the <file> read/only.
+
+    $>help umount
+    umount <drive>             closes the file associated with <drive>
+    			       and frees the resources
+
+    $>help create
+    create {flags} <file> {size}  creates a unix <file> initialized as a
+    				  CP/M disk of size {size} (default 1MB).
+    	   -b <block size>        default 1024 if size < 256K, else 2048
+    	   -d <# dir entries - 1> default 1023
+    	   -o <track offset>      default 0
+    	   -s <sectors per track> default 26
+    create <file> 256256          create a raw SSSD disk image
+
+    $>help interrupt
+    interrupt <key>            makes <key> interrupt CP/M back to the monitor
+    	    <key> may be a 2-digit hex number or ^x where x is one of a..z[\]^_
+    	    ^@ makes CP/M uninterruptible (from the keyboard)
+    interrupt                  without an argument displays the current setting
+
+    $>help go
+    Start/Continue CP/M execution
+
+    $>help !
+    !                          escape to a unix shell
+    !cmd                       execute unix cmd
+
+    $>help quit
+    Terminate yaze
+
+    $>help time
+    displays elapsed, user and system time in seconds,
+    	     along with simulator options
+---------------------------------------------------------------------------
+
+Monitor commands can be abbreviated (e.g. 'm' for 'mount'), except
+'quit' must by typed in full.  
+
+
+The yaze-1.00/test directory contains a number of .com files (CP/M
+executables).  The quickest way to test the installation is to execute
+prelim.com
+
+---------------------------------------------------------------------------
+A>dir
+PRELIM  .Z80  |  ZEXLAX  .PL   |  ZEXALL  .Z80  |  ZEXDOC  .Z80
+PRELIM  .COM  |  ZEXALL  .COM  |  ZEXDOC  .COM  |  SAVAGE  .PAS
+SAVAGE  .COM  |  SYS     .AZM  |  SYS     .COM
+A>prelim
+Preliminary tests complete
+A>
+---------------------------------------------------------------------------
+
+Zexall.com and zexdoc.com are both derived from zexlax.pl.  They are
+designed to exhaustively compare Z80 implementations.  This is done by
+executing all practicable instructions for as wide a range of operands
+as feasible, and calculating a 32-bit crc of the resulting machine
+states.  If the crc values of two implementations match we can be
+confident that they are, for practical purposes, identical.
+
+Zexall and zexdoc differ only in that zexall tests all 8 bits in the
+flag register for all instruction whereas zexdoc only tests the
+documented flag values.
+
+The expected crc values are those produced by a Mostek MK3880-4 CPU,
+date code 8010, and confirmed on an Epson PX-8.  Zexall and zexdoc run
+about 3.25 hours each on a 4MHz Z80.
+
+Savage.com is a simple benchmark compiled from savage.pas with
+Pascal/MT+.  Its execution time depends almost exclusively on the
+quality of the run-time library.  Also, Pascal/MT+ only uses 8080
+instructions, so it does not say anything about the speed of Z80
+extensions.
+
+'make install' puts the binaries in BINDIR (default: /usr/local/bin),
+the manual pages in MANDIR (default: /usr/local/man/man1) and the
+bootstrap file in LIBDIR (default: /usr/local/lib).
+
+
+3.  Command-line options
+========================
+Usage: yaze {flags} {commands}
+           -b <file>       boot from this file
+           -l <xxxx>       load bootfile at given (hex) address
+           -p <xx>         base page (top 2 hex digits of ccp base)
+           -s <file>       startup file
+           -v              verbose
+           -z <xxxx>       (hex) address of z3env (if desired)
+
+If yaze is run without command-line options it loads the bootstrap
+file from /usr/local/lib/yaze.boot or, if that does not exist, from
+./yaze.boot to address 0d800h and relocates the contents to fit that
+base address.  It then looks for a "run control" file .yazerc in the
+current directory or, if not found there, $(HOME)/.yazerc.  If an
+rc-file is found it is expected to contain a list of monitor commands,
+typically mount, attach and go, and these commands are executed.
+Finally, any remaining values on the command line are also interpreted
+as monitor commands and executed.
+
+If a "go" command was seen in the rc-file or on the command line the
+emulator is started, otherwise control is passed to the monitor.
+
+A different bootstrap file can be specified on the command line with
+the -b option.  The base page (top 2 hex digits of the ccp location)
+can be specified with the -p option.  The bootstrap file can be loaded
+at an address other than the base page with the -l option.  The
+required contents of bootstrap files are explained in the next
+section.
+
+A different startup file from .yazerc can be specified with the -s
+option.  Space (1 Kbyte) can be reserved for a Z-system environment at
+an address given by the -z flag.  The -v flag produces a configuration
+summary.
+
+Any monitor commands on the command line must be quoted if they are
+more than one word.  Example:
+	yaze "mount b foo" "attach lpt print.out"
+
+
+4.  Bootstrap file formats
+==========================
+A bootstrap file contains the Z80 machine code that is executed when
+the emulator starts.  Yaze accepts 3 types of bootstrap file:
+a) arbitrary code that is loaded to a specified address and executed,
+b) a single (non-relocatable) copy of CCP+BDOS that is loaded to the
+   CCP base address and started via the BIOS cold boot entry-point and,
+c) a double (and thus relocatable) copy of the CCP+BDOS that is
+   loaded to the CCP base and if necessary suitably relocated before
+   being started via the BIOS cold boot entry-point.
+
+An address given via the -l parameter on the command line indicates
+the first type of file.  It might be a bootstrap loader which contains
+a clone CP/M for which extra environment data must be set up before
+jumping to the BIOS cold boot routine.  Control is passed to the
+bootstrap at the address to which it was loaded, with the desired CCP
+base address in register HL.
+
+If no -l parameter is present on the command line the size of the boot
+file is used to differentiate cases b and c, and subcases.  The CCP
+and BDOS might have been assembled from source to run at a fixed
+address, in which case the file should be 5632 bytes long (1600h).
+Alternatively, the file might have been saved after executing movcpm
+on a real CP/M 2.2 system.  In this case it will be between 7808 and
+11263 long and CCP will found at offset 880h in the file.
+
+If the input file is twice the length of CCP+BDOS, i.e. 11264 bytes
+long, it is assumed to contain 2 copies of the same source, assembled
+to run at different 1K boundaries.  It does not matter what the
+addresses actually are, yaze takes one copy and adjusts the addresses
+(any bytes that differ between the 2 copies are assumed to be the high
+byte of an address) to fit the final location.  Similarly, if the
+input file is longer than 17407 it is assumed to contain 2 CP/M 2.2
+saves after movcpm with different system sizes.
+
+
+5.  Creating bootstrap files
+============================
+The bootstrap file distributed with yaze, yaze.boot, is a 2-copy file
+containing Don Kirkpatrick et al's D&J ZCPR as CCP and SUPRBDOS by
+Herman ten Brugge and Benjamin Ho as BDOS.  These programs claim to be
+freely redistributable.  They are both on the Walnut Creek CP/M CDROM
+and are also in the oak archives.
+
+I assembled both programs twice, once with P2DOS (the BDOS base
+address) set to 0C800H and once with it set to 0CC00H.  The resulting
+hex files were loaded with mload and concatenated together, making
+sure to pad the lengths of the individual components to 800H/0E00H.
+I added an instruction to strip the high bit from console output
+characters in SUPRBDOS, because I do not think this should be done in
+the BIOS - a debatable position because DR's documentation is
+inconclusive on the issue and the original BDOS does not strip the
+bit.  I also disabled the "delay 256 characters" feature in SUPRBDOS,
+because it was interfering with benchmarking when running yaze with
+input redirection.
+
+
+An easy way to make a boot file on a real CP/M system is:
+    B>movcpm 64 *
+
+    CONSTRUCTING 64k CP/M vers 2.2
+    READY FOR "SYSGEN" OR
+    "SAVE 34 CPM64.COM"
+    B>save 34 a:cpm64.com
+
+Then transfer cpm64.com as a binary file to your unix system and
+    yaze -b cm64.com
+
+    Yet Another Z80 Emulator version 1.00, Copyright 1995 Frank D. Cringle.
+    yaze comes with ABSOLUTELY NO WARRANTY; for details
+    see the file "COPYING" in the distribution directory.
+
+    Running 'cpm64.com'
+
+    A>
+
+This works because the default basepage is 0E4H and the CCP is located
+at 0E400H in a 64K CP/M system.  You must take this into account when
+using other system sizes, e.g.
+    yaze -b cpm63.com -p e0
+
+
+6.  CP/M disks
+==============
+CP/M version 1.4 used single-sided single-density 8" floppy disks with
+77 tracks of 26 128 byte sectors each.  This format and the
+arrangement of data within it remained the standard distribution
+format for CP/M 2.2, but other formats were now also supported.  This
+had advantages and disadvantages.  Double density, double sided disks,
+hard disks, other floppy sizes etc. could be used, but there was no
+standard method of determining what the format of a particular disk
+was.  Tables had to be built into the BIOS which matched the disk in
+question.
+
+Yaze does not attempt to access CP/M disks directly.  It assumes that
+it is accessing a unix file containing a copy of a CP/M disk.  The
+file can contain either a raw copy of a standard single-sided
+single-density disk (with sector skew = 6), or a de-skewed copy of any
+format with a descriptive header.  The header is recognized when the
+file starts with the string "<CPM_Disk>" (a sort of "magic number").
+
+The disk header occupies the first 128 bytes of the file and has the
+format:
+
+  0 -   8    <CPM_Disk>
+  9 -  31    a null-terminated ascii comment (may be empty)
+ 32 -  33    sectors per track
+ 34          block shift factor
+ 35          block mask
+ 36          extent mask
+ 37 -  38    disk size max
+ 39 -  40    directory max
+ 41          al0
+ 42          al1
+ 43 -  44    check size (always zero)
+ 45 -  46    track offset
+ 47 - 127    unused (zeros)
+
+CP/M aficionados will recognize bytes 32 - 46 as a copy of the disk
+parameter block.  2-byte values are stored little-endian (low-byte
+first).  The check size is set to zero because yaze does not allocate
+space for a check vector when mounting a disk.  Instead sys.com resets
+the disk system whenever control is returned from the monitor to CP/M,
+in case a disk was unmounted or remounted.  It is the responsibility
+of the user not to mess with disks from a different process, at least
+not without executing sys.com (or diskrst.com) before resuming a
+running yaze session.
+
+The raw contents of the disk follow the header.  The sectors must be
+arranged sequentially, i.e. any sector skew must be removed when
+copying a real disk into a <CPM_Disk> file, because yaze sets the
+sector translation table address to zero in the disk parameter header.
+
+If the file does not begin with "<CPM_Disk>" and is exactly 256256
+bytes long (77*26*128), it is assumed to be an exact copy of a SSSD
+disk.
+
+Empty disks can be created by the yaze monitor and by cdm.  When a
+disk is created only the directory and the last sector of the disk are
+actually written out.  This has the advantage that unallocated data
+does not occupy space in the unix file system. For example, if we
+create an 8MByte disk (the maximum size supported by standard
+CP/M-2.2), we can see that it only occupies 56KBytes of physical disk
+space.
+
+    A>sys
+     
+    $>create disk 8m
+    $>mount b disk
+    $>mount -v
+    A: r/o  test/
+      dph=FD90, xlt=0000, dirbuf=FF80, dpb=FDA0, csv=0000, alv=FA66, spt=0100
+      bsh=05, blm=1F, exm=01, dsm=0100, drm=07EF, al=FFFF, cks=0000, off=0000
+    B: r/w  disk
+      dph=FDAF, xlt=0000, dirbuf=FF80, dpb=FDBF, csv=0000, alv=FA87, spt=001A
+      bsh=04, blm=0F, exm=00, dsm=0FFF, drm=03FF, al=FFFF, cks=0000, off=0000
+    $>quit
+    
+    % du -sk disk
+    56      disk
+    % ls -sl disk
+     112 -rw-rw-r--   1 fdc      grp      8388736 Oct  9 21:32 disk
+
+A disadvantage of this method is that if the unix filesystem becomes
+full or the user's disk quota is exceeded when yaze tries to write
+data into a not-yet allocated part of the file, the process will be
+aborted with a SIGSEGV.  It might be possible to extend yaze with a
+signal handler and longjmp to cover this case, but that is not in
+version 1.00.
+
+
+There is no specific support in this package for transferring data
+from existing CP/M disks into a form suitable for use with yaze.  It
+is highly dependent on the available hardware and interfacing
+possibilities.  If the individual files from the disk can be got into
+a unix directory (maybe via serial transfer with kermit or
+x/y/zmodem), that directory can be mounted by yaze as a read-only
+pseudo disk and its contents used from there or copied into a
+<CPM_Disk> file.  If direct access to a floppy drive is available it
+is probably best to write a small program to transfer the contents
+with a header prepended and the sectors deskewed.  With luck it may be
+possible to use dd to copy the disk into a file.  Then generate a
+<CPM_Disk> of the same format with yaze or cdm, chop the unused data
+part with tail(1) and cat(1) the disk's data onto it.
+
+
+7.  Benchmarks
+==============
+
+SAVAGE.COM
+ yaze/50MHz supersparc:               11.6 secs (~ 22.4 MHz)
+ 4.0MHz Z80:                          65   secs
+ 2.5MHz Z80 (PX-8):                  105   secs (~  2.48MHz)
+
+
+ZEXALL.COM
+ yaze/50MHz supersparc:               1855 secs (~ 25.2 MHz)
+ 4.0MHz Z80:                         11688 secs
+ 2.5MHz Z80 (PX-8):                  19114 secs (~  2.45MHz)
+
+
+8.  Emulating embedded systems
+==============================
+The talk up to here has been of using yaze to run CP/M.  If you want
+to use it to emulate some other system you will have to add that
+system's interaction with the outsize world to the source code.  The
+instruction set emulator is in simz80.c.  I tried to make all
+references to memory and I/O ports via the macros that are defined in
+simz80.h.  These could be modified or replaced by function calls to
+reflect the behaviour of a particular embedded system.  If the target
+system uses interrupts, that logic would have to be added from
+scratch.
+
+9.  Software sources
+====================
+(/cdrom/cpm_cdrom is the path to the Walnut Creek CP/M CDROM on my
+system).
+
+SUPRDOS from /cdrom/cpm_cdrom/cpm/bdos/suprdos2.lbr (length = 90112)
+ 
+ZCPR from /cdrom/cpm_cdrom/demon/zcpr-d-j.com (length = 32896)
+(same as ftp.demon.co.uk:/pub/cpm/zcpr-d&j.com)
+
+
+10. Why?
+========
+Here are answers to some questions that I would probably be asking if
+I were reading this.
+
+Q. Why did you base this on CPM-2.2 rather than CPM-3?
+A. I do not have access to a CPM-3 system, so I could not have tested
+   the implementation.
+
+Q. Why did you write it all from scratch, rather than starting with one
+   of the other free emulators?
+A. "Not invented here", I guess.  Starting from scratch meant that I
+   could do what I liked with the code, including putting it under the
+   GPL, without consulting others.  Also, I have been messing with
+   this for years on and off.  I was not aware of other emulators when
+   I started.
+
+Q. Why didn't you rewrite CCP and BDOS in C and let them run on the
+   host cpu?
+A. That was the original plan, particularly while I thought there was
+   no free bdos available.  Partly because I want to finally get this
+   stuff out of the door and partly because it is a lot of work to do
+   right, I have left it for now.
+
+Q. Why no built-in debugger?
+A. My main aims were emulation accuracy and speed.  As it is, you can
+   run a CP/M debugger like zsid or z8e in the emulator.  If that is
+   not enough, you can run yaze under gdb or put hooks in the yaze
+   source to analyse particularly tricky cases.
+
+Q. What's all this perl stuff?
+A. I make no apology for using perl as a super-macro-processor to
+   generate simz80.c and zexall.z80 / zexdoc.z80.  You do not need
+   perl to install yaze, because the output files are provided, but
+   you will need it if you want to experiment.
+
+   Simz80.pl includes 5 booleans which define how simz80.c is
+   structured - see the source for more documentation.  A good way to
+   chew up machine cycles is to generate all 32 possible variants and
+   benchmark them by running zexall.com.
+
+   Zexlax.pl fills in pseudo-random initial states in the test cases.
+   Be careful if you change anything - you will have to run the new
+   version on a reference Z80 to find the expected CRC values.
+
+
+*** Local Variables: ***
+*** mode:outline ***
+*** outline-regexp: "[0-9]+\\." ***
+*** End: ***
